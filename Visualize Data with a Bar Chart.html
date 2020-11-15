@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualuze Data with a Bar Chart</title>
+    <!--jQuery CDN-->
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <!--D3 CDN-->
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <link rel="shortcut icon" href="#" />
+    <!--GOOGLE FONTS-->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+    <!--FA-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css">
+
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+        body {
+            margin: 0;
+            font-family: "Roboto Mono", monospace;
+        }
+        section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            border: 0px solid black;
+        }
+        nav {
+            position: fixed;
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            border: 0px solid black;
+        }
+        nav a {
+            border: 4px solid black;
+            border-radius: 50%;
+            display: block;
+            margin: 10px;
+            height: 30px;
+            width: 30px;
+        }
+        rect:hover {
+            fill: white;
+        }
+        #page-1,
+        nav a:nth-of-type(1) {
+            background-color: #0984e3;
+        }
+        #page-2,
+        nav a:nth-of-type(2) {
+            background-color: #0074cc;
+        }
+        a {
+            text-decoration: none;
+            color: rgb(0, 0, 0);
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+    
+    <nav>
+        <a href="#page-1"></a>
+        <a href="#page-2"></a>
+    </nav>
+    
+    <section id="page-1">
+        <h1 id="title">United States GDP</h1>
+        <main></main> 
+    </section>
+    <section id="page-2"> 
+        Made by me. <br>
+        <a href="https://www.christoskipouros.com">www.christoskipouros.com</a>
+
+    </section>
+    
+    
+    
+</body>
+</html>
+
+<script>
+    
+    var url = 'https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/GDP-data.json';
+
+    d3.json(url).then(data => {
+        doStuff(data);
+    })
+    
+    function doStuff(data){
+
+        var urlData = data.data.map(function(d){
+            return {date: new Date(d[0]), value: d[1]}
+        });
+        
+        var w = 800, h = 400;
+        var m = {top: 5, left: 70, bottom: 50, right: 50}
+        
+        var innerH = h - m.top - m.bottom;
+        var innerW = w - m.right - m.left;
+
+        var barWidth = innerW/urlData.length;
+
+        var minDate = d3.min(urlData, function(d){
+            return d.date;
+        });
+        var maxDate = d3.max(urlData, function(d){
+            return d.date;
+        });
+        var minValue = d3.min(urlData, function(d){
+            return d.value;
+        });
+        var maxValue = d3.max(urlData, function(d){
+            return d.value;
+        });
+
+        var xScale = d3.scaleTime()
+                        .domain([minDate, maxDate])
+                        .range([0, innerW]);
+        var yScale = d3.scaleLinear()
+                        .domain([0, maxValue])
+                        .range([innerH, 0]);
+
+        var xAxis = d3.axisBottom(xScale);
+        var yAxis = d3.axisLeft(yScale);
+
+        var svg = d3.select('main')
+                    .append('svg')
+                    .attr('width', w)
+                    .attr('height', h)
+                    .style('fill', '#0984e3')
+                    //css
+                    .style('background', '#dfe6e9')
+                    .style('border-radius', '2%')
+                    .style('padding-top', '20px')
+                    .style('border', '4px solid black')
+                    .style('box-shadow', '10px 10px 25px rgb(44, 57, 58)');
+                    
+        svg.append('g').selectAll('rect')
+            .data(urlData)
+            .enter()
+            .append('rect')
+            .attr('x', function(d, i){return m.left+i*barWidth})
+            .attr('y', function(d){return yScale(d.value)})
+            .attr('width', barWidth)
+            .attr('height', function(d){return innerH - yScale(d.value)})
+            .attr('class', 'bar')
+            .attr('data-date', function(d){return d.date.toISOString().split('T')[0]})
+            .attr('data-gdp', function(d){return d.value})
+            .attr('transform', 'translate(0, 10)')//fix for top, also applied in the axis below
+            .on("mouseover", function(d) {
+                //d is the event object in this case, not the dataset
+                //grab date, value by ref the attributes
+                //Create the tooltip label
+                svg.append("text")
+                .attr("id", "tooltip")
+                .attr("x", 125)
+                .attr("y", 390)
+                .attr("text-anchor", "middle")
+                .attr("font-family", "Roboto Mono")
+                .attr("font-size", "11px")
+                .attr("font-weight", "bold")
+                .attr("fill", "black")
+                .attr('data-date', d3.select(this).attr('data-date'))
+                .text('DATE: ' + d3.select(this).attr('data-date')+ ', VALUE: ' + d3.select(this).attr('data-gdp'));
+                
+            })//on mouseover
+            .on("mouseout", function() {
+                //Remove the tooltip
+                d3.select("#tooltip").remove();
+            })//on mouseout
+
+
+        svg.append('g')
+            .call(xAxis)//fix for top, also applied in the rects above (the 10 px)
+            .attr('transform', 'translate('+m.left+', '+ (innerH+10) +')').attr('id', 'x-axis');
+        svg.append('g')
+            .call(yAxis)//fix for top, also applied in the rects above (the 10 px)
+            .attr('transform', 'translate('+m.left+', 10)').attr('id', 'y-axis');
+
+        
+        svg.append('text')
+            .attr('transform', 'rotate(-90)')
+            .attr('x', -175)
+            .attr('y', 90)
+            .text('Gross Domestic Product')
+            .attr("font-size", "11px");
+
+        svg.append('text')
+            .attr('x', 450)
+            .attr('y', 390)
+            .text('More Information: http://www.bea.gov/national/pdf/nipaguid.pdf')
+            .attr('class', 'info')
+            .attr("font-size", "8px");
+        
+    }//function doStuff
+    
+
+</script>
